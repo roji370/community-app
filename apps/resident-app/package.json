@@ -1,0 +1,35 @@
+{
+  "name": "@community/resident-app",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "lint": "eslint .",
+    "clean": "rm -rf .expo dist node_modules/.cache"
+  },
+  "dependencies": {
+    "expo": "~56.0.0",
+    "expo-router": "~5.0.0",
+    "expo-status-bar": "~2.2.0",
+    "expo-secure-store": "~14.2.0",
+    "expo-splash-screen": "~0.30.0",
+    "expo-linking": "~56.0.0",
+    "expo-constants": "~17.1.0",
+    "react": "18.3.1",
+    "react-native": "0.79.2",
+    "react-native-safe-area-context": "5.4.0",
+    "react-native-screens": "~4.11.0",
+    "react-native-reanimated": "~3.17.0",
+    "react-native-gesture-handler": "~2.24.0",
+    "axios": "^1.7.0",
+    "zustand": "^5.0.0",
+    "@community/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "~18.3.0",
+    "typescript": "^5.7.0"
+  }
+}

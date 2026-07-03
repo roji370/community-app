@@ -1,0 +1,329 @@
+// ──────────────────────────────────────────────────────────────────────
+// Community App — Prisma Schema
+// ──────────────────────────────────────────────────────────────────────
+// CRITICAL CONSTRAINTS (enforced at DB level, not just app logic):
+//   1. COMMERCIAL notifications can NEVER have isPush = true
+//   2. SECURITY notification preferences can NEVER be disabled
+//   3. Multiple users per unit (owner + spouse + adult children)
+//   4. Complaint slaDueAt is a real queryable timestamp
+// ──────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ──────────────────────────────────────────────────────────────
+// Enums
+// ──────────────────────────────────────────────────────────────
+
+enum UserRole {
+  OWNER
+  TENANT
+  HOUSEHOLD_MEMBER
+}
+
+enum UserStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  OFFBOARDED
+}
+
+enum NotificationCategory {
+  SECURITY
+  BILLING
+  SOCIETY_NOTICE
+  COMPLAINT_UPDATE
+  COMMERCIAL
+}
+
+enum VisitorStatus {
+  PENDING
+  APPROVED
+  DENIED
+  EXPIRED
+}
+
+enum VisitorEntryType {
+  ONE_TIME
+  SCHEDULED
+  RECURRING
+}
+
+enum VisitorCreatedBy {
+  RESIDENT
+  GUARD
+}
+
+enum VisitorPurpose {
+  GUEST
+  DELIVERY
+  CAB
+  DOMESTIC_HELP
+  MAINTENANCE
+  OTHER
+}
+
+enum ComplaintPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ComplaintStatus {
+  OPEN
+  ACKNOWLEDGED
+  IN_PROGRESS
+  RESOLVED
+  REOPENED
+}
+
+enum ComplaintCategory {
+  PLUMBING
+  ELECTRICAL
+  SECURITY
+  COMMON_AREA
+  OTHER
+}
+
+enum BillStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+
+// ──────────────────────────────────────────────────────────────
+// Models
+// ──────────────────────────────────────────────────────────────
+
+model Society {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  city      String
+  state     String
+  pincode   String
+  totalUnits Int     @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  units     Unit[]
+  notices   Notice[]
+  visitors  Visitor[]
+  complaints Complaint[]
+  bills     Bill[]
+  notifications AppNotification[]
+
+  @@index([pincode])
+  @@index([name])
+}
+
+model Unit {
+  id         String   @id @default(cuid())
+  societyId  String
+  identifier String   // e.g. "A-402"
+  block      String?
+  floor      Int?
+  createdAt  DateTime @default(now())
+
+  society    Society  @relation(fields: [societyId], references: [id], onDelete: Cascade)
+  users      User[]
+  visitors   Visitor[]
+  complaints Complaint[]
+  bills      Bill[]
+
+  @@unique([societyId, identifier])
+  @@index([societyId])
+}
+
+model User {
+  id              String     @id @default(cuid())
+  phone           String     @unique
+  name            String
+  email           String?
+  unitId          String?
+  societyId       String?
+  role            UserRole   @default(OWNER)
+  status          UserStatus @default(PENDING_APPROVAL)
+  profilePhotoUrl String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  unit            Unit?      @relation(fields: [unitId], references: [id])
+  notificationPreferences NotificationPreference[]
+  notifications   AppNotification[]
+  createdVisitors Visitor[]  @relation("VisitorCreatedByUser")
+  respondedVisitors Visitor[] @relation("VisitorRespondedByUser")
+  complaints      Complaint[] @relation("ComplaintCreatedByUser")
+  notices         Notice[]   @relation("NoticeCreatedByUser")
+
+  @@index([phone])
+  @@index([unitId])
+  @@index([societyId])
+}
+
+/// OTP codes for phone verification — short-lived, rate-limited
+model OTPCode {
+  id        String   @id @default(cuid())
+  phone     String
+  code      String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([phone, createdAt])
+}
+
+/// Refresh tokens for JWT rotation
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+}
+
+model Visitor {
+  id               String          @id @default(cuid())
+  createdBy        VisitorCreatedBy
+  createdByUserId  String?
+  unitId           String
+  societyId        String
+  name             String
+  phone            String?
+  photoUrl         String?
+  purpose          VisitorPurpose
+  purposeNote      String?
+  status           VisitorStatus   @default(PENDING)
+  entryType        VisitorEntryType
+  expectedAt       DateTime?
+  recurringSchedule String?
+  respondedAt      DateTime?
+  respondedByUserId String?
+  qrCode           String?         @unique
+  shareableLink    String?         @unique
+  entryAt          DateTime?
+  exitAt           DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  unit             Unit            @relation(fields: [unitId], references: [id])
+  society          Society         @relation(fields: [societyId], references: [id])
+  createdByUser    User?           @relation("VisitorCreatedByUser", fields: [createdByUserId], references: [id])
+  respondedByUser  User?           @relation("VisitorRespondedByUser", fields: [respondedByUserId], references: [id])
+
+  @@index([unitId, status])
+  @@index([societyId, createdAt])
+  @@index([phone])
+}
+
+model Complaint {
+  id              String           @id @default(cuid())
+  unitId          String
+  societyId       String
+  createdByUserId String
+  category        ComplaintCategory
+  description     String
+  photoUrls       String[]
+  priority        ComplaintPriority @default(MEDIUM)
+  status          ComplaintStatus   @default(OPEN)
+  slaDueAt        DateTime         // Real queryable timestamp — not cosmetic
+  acknowledgedAt  DateTime?
+  resolvedAt      DateTime?
+  reopenedAt      DateTime?
+  reopenCount     Int              @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  unit            Unit             @relation(fields: [unitId], references: [id])
+  society         Society          @relation(fields: [societyId], references: [id])
+  createdByUser   User             @relation("ComplaintCreatedByUser", fields: [createdByUserId], references: [id])
+
+  @@index([unitId, status])
+  @@index([societyId, status])
+  @@index([slaDueAt])
+}
+
+model Bill {
+  id         String     @id @default(cuid())
+  unitId     String
+  societyId  String
+  amountDue  Float
+  amountPaid Float      @default(0)
+  dueDate    DateTime
+  breakdown  Json       // Array of { label: string, amount: number }
+  status     BillStatus @default(PENDING)
+  paymentId  String?    // Razorpay payment ID
+  paidAt     DateTime?
+  receiptUrl String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  unit       Unit       @relation(fields: [unitId], references: [id])
+  society    Society    @relation(fields: [societyId], references: [id])
+
+  @@index([unitId, status])
+  @@index([societyId, status])
+  @@index([dueDate])
+}
+
+model Notice {
+  id                    String              @id @default(cuid())
+  societyId             String
+  createdByUserId       String
+  title                 String
+  body                  String
+  requiresAcknowledgment Boolean            @default(false)
+  acknowledgedByUserIds String[]
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  society               Society             @relation(fields: [societyId], references: [id])
+  createdByUser         User                @relation("NoticeCreatedByUser", fields: [createdByUserId], references: [id])
+
+  @@index([societyId, createdAt])
+}
+
+/// Notification preferences per user per category.
+/// SECURITY is always enabled (CHECK constraint enforced via raw SQL migration).
+model NotificationPreference {
+  id       String              @id @default(cuid())
+  userId   String
+  category NotificationCategory
+  enabled  Boolean             @default(true)
+
+  user     User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, category])
+}
+
+/// In-app notifications. Named AppNotification to avoid conflict with browser Notification API.
+/// COMMERCIAL category must NEVER have isPush=true (CHECK constraint enforced via raw SQL migration).
+model AppNotification {
+  id        String              @id @default(cuid())
+  category  NotificationCategory
+  isPush    Boolean             @default(false)
+  userId    String
+  societyId String
+  title     String
+  body      String
+  actionUrl String?
+  imageUrl  String?
+  isRead    Boolean             @default(false)
+  createdAt DateTime            @default(now())
+
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  society   Society             @relation(fields: [societyId], references: [id])
+
+  @@index([userId, isRead, createdAt])
+  @@index([societyId, category])
+}
