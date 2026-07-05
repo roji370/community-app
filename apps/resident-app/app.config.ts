@@ -23,7 +23,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     package: 'com.community.resident',
   },
-  plugins: ['expo-router', 'expo-secure-store'],
+  plugins: ['expo-router', 'expo-secure-store', 'expo-splash-screen', 'expo-status-bar'],
   experiments: {
     typedRoutes: true,
   },
