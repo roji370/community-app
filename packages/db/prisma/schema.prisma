@@ -63,6 +63,7 @@ enum VisitorPurpose {
   GUEST
   DELIVERY
   CAB
+  COURIER
   DOMESTIC_HELP
   MAINTENANCE
   OTHER
@@ -117,6 +118,7 @@ model Society {
   complaints Complaint[]
   bills     Bill[]
   notifications AppNotification[]
+  guards    Guard[]
 
   @@index([pincode])
   @@index([name])
@@ -160,6 +162,7 @@ model User {
   respondedVisitors Visitor[] @relation("VisitorRespondedByUser")
   complaints      Complaint[] @relation("ComplaintCreatedByUser")
   notices         Notice[]   @relation("NoticeCreatedByUser")
+  fcmTokens       FcmToken[]
 
   @@index([phone])
   @@index([unitId])
@@ -195,7 +198,8 @@ model RefreshToken {
 model Visitor {
   id               String          @id @default(cuid())
   createdBy        VisitorCreatedBy
-  createdByUserId  String?
+  createdByUserId  String?          // set when resident pre-approves
+  guardId          String?          // set when guard creates at gate
   unitId           String
   societyId        String
   name             String
@@ -204,9 +208,10 @@ model Visitor {
   purpose          VisitorPurpose
   purposeNote      String?
   status           VisitorStatus   @default(PENDING)
-  entryType        VisitorEntryType
+  entryType        VisitorEntryType @default(ONE_TIME)
   expectedAt       DateTime?
   recurringSchedule String?
+  expiresAt        DateTime?        // set to createdAt + 3min for gate requests
   respondedAt      DateTime?
   respondedByUserId String?
   qrCode           String?         @unique
@@ -220,9 +225,11 @@ model Visitor {
   society          Society         @relation(fields: [societyId], references: [id])
   createdByUser    User?           @relation("VisitorCreatedByUser", fields: [createdByUserId], references: [id])
   respondedByUser  User?           @relation("VisitorRespondedByUser", fields: [respondedByUserId], references: [id])
+  guard            Guard?          @relation(fields: [guardId], references: [id])
 
   @@index([unitId, status])
   @@index([societyId, createdAt])
+  @@index([expiresAt])
   @@index([phone])
 }
 
@@ -326,4 +333,35 @@ model AppNotification {
 
   @@index([userId, isRead, createdAt])
   @@index([societyId, category])
+}
+
+/// Security guard accounts — authenticate with staffId + PIN, not phone OTP
+model Guard {
+  id        String   @id @default(cuid())
+  societyId String
+  staffId   String   @unique
+  pin       String   // bcrypt hashed
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  society   Society  @relation(fields: [societyId], references: [id])
+  visitors  Visitor[]
+
+  @@index([societyId])
+  @@index([staffId])
+}
+
+/// FCM tokens for push notifications — one user can have multiple devices
+model FcmToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  platform  String   // "ios" | "android" | "web"
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

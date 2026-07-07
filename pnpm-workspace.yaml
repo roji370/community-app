@@ -7,6 +7,8 @@ allowBuilds:
   '@prisma/engines': true
   esbuild: true
   prisma: true
+  protobufjs: true
+  '@firebase/util': true
 minimumReleaseAgeExclude:
   - '@expo/cli@56.1.18'
   - '@expo/config-plugins@56.0.11'
