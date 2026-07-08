@@ -10,12 +10,17 @@ import {
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { OnboardUserDto } from './dto/users.dto';
+import { RegisterFcmTokenDto } from '../visitors/dto/visitors.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { ActiveStatusGuard } from '../auth/guards/active-status.guard';
+import { FcmService } from '../notifications/fcm.service';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly fcmService: FcmService,
+  ) {}
 
   /**
    * POST /api/users/onboard
@@ -77,5 +82,20 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   async getUnits(@Param('societyId') societyId: string) {
     return this.usersService.getUnitsForSociety(societyId);
+  }
+
+  /**
+   * POST /api/users/fcm-token
+   * Register a Firebase Cloud Messaging token for push notifications.
+   * Called by the resident app after login and on token refresh.
+   */
+  @Post('fcm-token')
+  @UseGuards(JwtAuthGuard)
+  async registerFcmToken(
+    @Request() req: { user: { id: string } },
+    @Body() dto: RegisterFcmTokenDto,
+  ) {
+    await this.fcmService.upsertToken(req.user.id, dto.token, dto.platform);
+    return { registered: true };
   }
 }

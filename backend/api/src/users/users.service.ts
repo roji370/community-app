@@ -139,7 +139,7 @@ export class UsersService {
     });
 
     // Return units with occupancy info (how many active residents)
-    return units.map((unit) => ({
+    return units.map((unit: { id: string; identifier: string; block: string | null; floor: number | null; users: { id: string }[] }) => ({
       id: unit.id,
       identifier: unit.identifier,
       block: unit.block,
