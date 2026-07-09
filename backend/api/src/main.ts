@@ -35,8 +35,9 @@ async function bootstrap() {
   app.useGlobalInterceptors(new TransformInterceptor());
 
   const port = process.env.API_PORT || 3000;
-  await app.listen(port);
-  console.log(`\n🚀 Community API running on http://localhost:${port}/api`);
+  await app.listen(port, '0.0.0.0');
+  console.log(`\n🚀 Community API running on http://0.0.0.0:${port}/api`);
+  console.log(`   LAN access: http://192.168.0.132:${port}/api`);
   console.log(`   Environment: ${process.env.NODE_ENV || 'development'}\n`);
 }
 
