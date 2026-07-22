@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { Platform } from 'react-native';
+import { getApp } from '@react-native-firebase/app';
 import messaging from '@react-native-firebase/messaging';
 import api from '../services/api';
 
@@ -23,6 +24,15 @@ export function useFirebasePush(onVisitorPush?: PushCallback) {
     let unsubscribeForeground: (() => void) | null = null;
 
     async function setup() {
+      // Guard: check if Firebase native SDK is initialised
+      try {
+        getApp();
+      } catch {
+        console.warn('[FCM] Firebase app not initialised – skipping push setup. '
+          + 'Run "npx expo prebuild --clean" to regenerate the native project with Firebase config.');
+        return;
+      }
+
       // Request permission
       const authStatus = await messaging().requestPermission();
       const enabled =
@@ -84,6 +94,12 @@ async function registerToken(token: string) {
 
 // Handle notification tap when app was in background/quit
 export function setupBackgroundNotificationHandler() {
+  try {
+    getApp();
+  } catch {
+    console.warn('[FCM] Firebase app not initialised – skipping background handler.');
+    return;
+  }
   messaging().setBackgroundMessageHandler(async (remoteMessage) => {
     console.log('[FCM] Background message:', remoteMessage.data?.type);
   });
