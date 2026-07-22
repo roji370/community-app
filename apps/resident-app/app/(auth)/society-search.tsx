@@ -9,8 +9,31 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { searchSocieties } from '../../src/services/auth';
 import type { Society } from '@community/shared-types';
+
+const Colors = {
+  background: '#F8F9FF',
+  surface: '#FFFFFF',
+  primary: '#2563EB',
+  primaryDark: '#004AC6',
+  textPrimary: '#0B1C30',
+  textTertiary: '#737686',
+  cardBorder: '#F1F5F9',
+  inputBorder: '#E2E8F0',
+  surfaceContainerLow: '#EFF4FF',
+};
+
+const Shadow = {
+  card: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.03,
+    shadowRadius: 16,
+    elevation: 1,
+  },
+};
 
 export default function SocietySearchScreen() {
   const [query, setQuery] = useState('');
@@ -19,14 +42,11 @@ export default function SocietySearchScreen() {
   const [searched, setSearched] = useState(false);
   const router = useRouter();
 
-  // Debounced search
   const searchTimeoutRef = { current: null as NodeJS.Timeout | null };
 
   const handleSearch = useCallback((text: string) => {
     setQuery(text);
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     if (text.length < 2) {
       setResults([]);
       setSearched(false);
@@ -60,23 +80,21 @@ export default function SocietySearchScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>← Back</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+          <Ionicons name="arrow-back" size={20} color={Colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
       <Text style={styles.title}>Find your society</Text>
-      <Text style={styles.subtitle}>
-        Search by society name or pincode
-      </Text>
+      <Text style={styles.subtitle}>Search by society name or pincode</Text>
 
       {/* Search input */}
       <View style={styles.searchContainer}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <Ionicons name="search" size={18} color={Colors.textTertiary} />
         <TextInput
           style={styles.searchInput}
           placeholder="e.g. Sunrise Heights or 560034"
-          placeholderTextColor="#475569"
+          placeholderTextColor={Colors.textTertiary}
           value={query}
           onChangeText={handleSearch}
           autoFocus
@@ -88,7 +106,7 @@ export default function SocietySearchScreen() {
       {/* Results */}
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color="#6366F1" />
+          <ActivityIndicator size="small" color={Colors.primary} />
         </View>
       ) : (
         <FlatList
@@ -98,7 +116,9 @@ export default function SocietySearchScreen() {
           ListEmptyComponent={
             searched ? (
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyIcon}>🏘️</Text>
+                <View style={styles.emptyIconCircle}>
+                  <Ionicons name="business-outline" size={28} color={Colors.textTertiary} />
+                </View>
                 <Text style={styles.emptyTitle}>No societies found</Text>
                 <Text style={styles.emptySubtitle}>
                   Try a different name or pincode.{'\n'}
@@ -114,7 +134,7 @@ export default function SocietySearchScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.societyIcon}>
-                <Text style={styles.societyIconText}>🏢</Text>
+                <Ionicons name="business" size={22} color={Colors.primary} />
               </View>
               <View style={styles.societyInfo}>
                 <Text style={styles.societyName}>{item.name}</Text>
@@ -123,7 +143,7 @@ export default function SocietySearchScreen() {
                   {item.city} • {item.pincode} • {item.totalUnits} units
                 </Text>
               </View>
-              <Text style={styles.chevron}>›</Text>
+              <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
             </TouchableOpacity>
           )}
         />
@@ -135,50 +155,59 @@ export default function SocietySearchScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: Colors.background,
     paddingTop: 60,
   },
   header: {
     paddingHorizontal: 24,
     marginBottom: 24,
   },
-  backText: {
-    color: '#94A3B8',
-    fontSize: 16,
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: Colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    ...Shadow.card,
   },
   title: {
     fontSize: 28,
+    fontFamily: 'Inter_700Bold',
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: Colors.textPrimary,
     paddingHorizontal: 24,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 16,
-    color: '#94A3B8',
+    fontFamily: 'Inter_400Regular',
+    fontWeight: '400',
+    color: Colors.textTertiary,
     paddingHorizontal: 24,
     marginBottom: 24,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
-    borderRadius: 12,
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
     marginHorizontal: 24,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.inputBorder,
     marginBottom: 16,
-  },
-  searchIcon: {
-    fontSize: 16,
-    marginRight: 10,
+    gap: 10,
   },
   searchInput: {
     flex: 1,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#F8FAFC',
+    fontFamily: 'Inter_400Regular',
+    fontWeight: '400',
+    color: Colors.textPrimary,
   },
   loadingContainer: {
     paddingTop: 40,
@@ -191,66 +220,72 @@ const styles = StyleSheet.create({
   societyCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E293B',
-    borderRadius: 14,
+    backgroundColor: Colors.surface,
+    borderRadius: 20,
     padding: 16,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.cardBorder,
+    ...Shadow.card,
   },
   societyIcon: {
     width: 48,
     height: 48,
-    borderRadius: 12,
-    backgroundColor: '#312E81',
+    borderRadius: 14,
+    backgroundColor: Colors.surfaceContainerLow,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
-  },
-  societyIconText: {
-    fontSize: 22,
   },
   societyInfo: {
     flex: 1,
   },
   societyName: {
     fontSize: 17,
+    fontFamily: 'Inter_600SemiBold',
     fontWeight: '600',
-    color: '#F8FAFC',
+    color: Colors.textPrimary,
     marginBottom: 2,
   },
   societyAddress: {
     fontSize: 14,
-    color: '#94A3B8',
+    fontFamily: 'Inter_400Regular',
+    fontWeight: '400',
+    color: Colors.textTertiary,
     marginBottom: 2,
   },
   societyMeta: {
     fontSize: 13,
-    color: '#64748B',
-  },
-  chevron: {
-    fontSize: 24,
-    color: '#475569',
-    fontWeight: '300',
+    fontFamily: 'Inter_400Regular',
+    fontWeight: '400',
+    color: Colors.textTertiary,
   },
   emptyContainer: {
     alignItems: 'center',
     paddingTop: 60,
     paddingHorizontal: 24,
+    gap: 10,
   },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
+  emptyIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.surfaceContainerLow,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
   },
   emptyTitle: {
     fontSize: 18,
+    fontFamily: 'Inter_600SemiBold',
     fontWeight: '600',
-    color: '#E2E8F0',
-    marginBottom: 8,
+    color: Colors.textPrimary,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#64748B',
+    fontFamily: 'Inter_400Regular',
+    fontWeight: '400',
+    color: Colors.textTertiary,
     textAlign: 'center',
     lineHeight: 22,
   },

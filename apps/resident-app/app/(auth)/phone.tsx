@@ -11,7 +11,21 @@ import {
   Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { requestOtp } from '../../src/services/auth';
+
+const Colors = {
+  background: '#F8F9FF',
+  surface: '#FFFFFF',
+  primary: '#2563EB',
+  primaryDark: '#004AC6',
+  textPrimary: '#0B1C30',
+  textTertiary: '#737686',
+  cardBorder: '#F1F5F9',
+  inputBorder: '#E2E8F0',
+  dangerText: '#DC2626',
+  surfaceContainerLow: '#EFF4FF',
+};
 
 export default function PhoneScreen() {
   const [phone, setPhone] = useState('');
@@ -20,7 +34,6 @@ export default function PhoneScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
-  // Animate on mount
   useState(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -70,9 +83,9 @@ export default function PhoneScreen() {
         {/* Logo area */}
         <View style={styles.logoContainer}>
           <View style={styles.logoCircle}>
-            <Text style={styles.logoText}>🏠</Text>
+            <Ionicons name="home" size={36} color={Colors.primary} />
           </View>
-          <Text style={styles.appName}>Community</Text>
+          <Text style={styles.appName}>Haven</Text>
           <Text style={styles.tagline}>Your society, simplified</Text>
         </View>
 
@@ -86,7 +99,7 @@ export default function PhoneScreen() {
             <TextInput
               style={styles.phoneInput}
               placeholder="98765 43210"
-              placeholderTextColor="#475569"
+              placeholderTextColor={Colors.textTertiary}
               keyboardType="phone-pad"
               maxLength={10}
               value={phone}
@@ -109,6 +122,7 @@ export default function PhoneScreen() {
           <Text style={styles.buttonText}>
             {loading ? 'Sending OTP...' : 'Get OTP'}
           </Text>
+          {!loading && <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />}
         </TouchableOpacity>
 
         {/* Privacy note */}
@@ -125,7 +139,7 @@ export default function PhoneScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: Colors.background,
   },
   content: {
     flex: 1,
@@ -139,26 +153,24 @@ const styles = StyleSheet.create({
   logoCircle: {
     width: 80,
     height: 80,
-    borderRadius: 40,
-    backgroundColor: '#1E293B',
+    borderRadius: 28,
+    backgroundColor: Colors.primary + '12',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  logoText: {
-    fontSize: 36,
   },
   appName: {
     fontSize: 32,
+    fontFamily: 'Inter_700Bold',
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: Colors.primaryDark,
     letterSpacing: -0.5,
   },
   tagline: {
     fontSize: 16,
-    color: '#94A3B8',
+    fontFamily: 'Inter_400Regular',
+    fontWeight: '400',
+    color: Colors.textTertiary,
     marginTop: 4,
   },
   inputSection: {
@@ -166,68 +178,79 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 15,
-    color: '#CBD5E1',
-    marginBottom: 12,
+    fontFamily: 'Inter_500Medium',
     fontWeight: '500',
+    color: Colors.textPrimary,
+    marginBottom: 12,
   },
   phoneRow: {
     flexDirection: 'row',
     gap: 12,
   },
   countryCode: {
-    backgroundColor: '#1E293B',
-    borderRadius: 12,
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
     paddingHorizontal: 16,
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.inputBorder,
   },
   countryCodeText: {
-    color: '#E2E8F0',
+    color: Colors.textPrimary,
     fontSize: 17,
+    fontFamily: 'Inter_600SemiBold',
     fontWeight: '600',
   },
   phoneInput: {
     flex: 1,
-    backgroundColor: '#1E293B',
-    borderRadius: 12,
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 16,
     fontSize: 17,
-    color: '#F8FAFC',
+    fontFamily: 'Inter_500Medium',
+    color: Colors.textPrimary,
     letterSpacing: 1,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.inputBorder,
     fontWeight: '500',
   },
   errorText: {
-    color: '#F87171',
+    color: Colors.dangerText,
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    fontWeight: '400',
     marginTop: 8,
   },
   button: {
-    backgroundColor: '#6366F1',
-    borderRadius: 12,
-    paddingVertical: 16,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.primary,
+    borderRadius: 16,
+    paddingVertical: 18,
     marginBottom: 24,
   },
   buttonDisabled: {
-    backgroundColor: '#334155',
+    backgroundColor: Colors.inputBorder,
   },
   buttonText: {
     color: '#FFFFFF',
     fontSize: 17,
+    fontFamily: 'Inter_700Bold',
     fontWeight: '700',
   },
   privacyNote: {
     textAlign: 'center',
-    color: '#64748B',
+    color: Colors.textTertiary,
     fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    fontWeight: '400',
     lineHeight: 20,
   },
   privacyLink: {
-    color: '#818CF8',
+    color: Colors.primary,
     textDecorationLine: 'underline',
   },
 });

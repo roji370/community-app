@@ -11,8 +11,23 @@ import {
   Animated,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { verifyOtp, requestOtp } from '../../src/services/auth';
 import { useAuthStore } from '../../src/store/authStore';
+
+const Colors = {
+  background: '#F8F9FF',
+  surface: '#FFFFFF',
+  primary: '#2563EB',
+  primaryDark: '#004AC6',
+  textPrimary: '#0B1C30',
+  textTertiary: '#737686',
+  cardBorder: '#F1F5F9',
+  inputBorder: '#E2E8F0',
+  warningBg: '#FEF3C7',
+  warningText: '#B45309',
+  surfaceContainerLow: '#EFF4FF',
+};
 
 export default function OTPScreen() {
   const { phone } = useLocalSearchParams<{ phone: string }>();
@@ -32,7 +47,6 @@ export default function OTPScreen() {
     }).start();
   }, []);
 
-  // Resend timer countdown
   useEffect(() => {
     if (resendTimer <= 0) return;
     const interval = setInterval(() => {
@@ -43,22 +57,15 @@ export default function OTPScreen() {
 
   const handleOtpChange = (value: string, index: number) => {
     if (!/^\d*$/.test(value)) return;
-
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
-
-    // Auto-advance to next input
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
-
-    // Auto-submit when all 6 digits entered
     if (value && index === 5) {
       const code = newOtp.join('');
-      if (code.length === 6) {
-        handleVerify(code);
-      }
+      if (code.length === 6) handleVerify(code);
     }
   };
 
@@ -74,12 +81,10 @@ export default function OTPScreen() {
   const handleVerify = async (code?: string) => {
     const otpCode = code || otp.join('');
     if (otpCode.length !== 6 || !phone) return;
-
     setLoading(true);
     try {
       const result = await verifyOtp(phone, otpCode);
       await setAuth(result);
-
       if (result.isNewUser) {
         router.replace('/(auth)/society-search');
       } else if (result.user?.status === 'PENDING_APPROVAL') {
@@ -116,8 +121,8 @@ export default function OTPScreen() {
     >
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
         {/* Back button */}
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backText}>← Back</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()} activeOpacity={0.7}>
+          <Ionicons name="arrow-back" size={20} color={Colors.textPrimary} />
         </TouchableOpacity>
 
         <Text style={styles.title}>Verify your number</Text>
@@ -146,7 +151,8 @@ export default function OTPScreen() {
 
         {/* Dev hint */}
         <View style={styles.devHint}>
-          <Text style={styles.devHintText}>🧪 Dev mode: use 123456</Text>
+          <Ionicons name="flask" size={14} color={Colors.warningText} />
+          <Text style={styles.devHintText}>Dev mode: use 123456</Text>
         </View>
 
         {/* Verify button */}
@@ -181,7 +187,7 @@ export default function OTPScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: Colors.background,
   },
   content: {
     flex: 1,
@@ -189,26 +195,33 @@ const styles = StyleSheet.create({
     paddingTop: 60,
   },
   backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: Colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
     marginBottom: 32,
-  },
-  backText: {
-    color: '#94A3B8',
-    fontSize: 16,
   },
   title: {
     fontSize: 28,
+    fontFamily: 'Inter_700Bold',
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: Colors.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#94A3B8',
+    fontFamily: 'Inter_400Regular',
+    fontWeight: '400',
+    color: Colors.textTertiary,
     lineHeight: 24,
     marginBottom: 40,
   },
   phoneHighlight: {
-    color: '#E2E8F0',
+    color: Colors.primaryDark,
     fontWeight: '600',
   },
   otpContainer: {
@@ -220,45 +233,47 @@ const styles = StyleSheet.create({
   otpInput: {
     width: 48,
     height: 56,
-    borderRadius: 12,
-    backgroundColor: '#1E293B',
+    borderRadius: 14,
+    backgroundColor: Colors.surface,
     borderWidth: 1.5,
-    borderColor: '#334155',
+    borderColor: Colors.inputBorder,
     textAlign: 'center',
     fontSize: 22,
+    fontFamily: 'Inter_700Bold',
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: Colors.textPrimary,
   },
   otpInputFilled: {
-    borderColor: '#6366F1',
-    backgroundColor: '#1E1B4B',
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary + '08',
   },
   devHint: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
     marginBottom: 32,
   },
   devHintText: {
-    color: '#FCD34D',
+    color: Colors.warningText,
     fontSize: 13,
-    backgroundColor: '#422006',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 8,
-    overflow: 'hidden',
+    fontFamily: 'Inter_500Medium',
+    fontWeight: '500',
   },
   button: {
-    backgroundColor: '#6366F1',
-    borderRadius: 12,
-    paddingVertical: 16,
+    backgroundColor: Colors.primary,
+    borderRadius: 16,
+    paddingVertical: 18,
     alignItems: 'center',
     marginBottom: 16,
   },
   buttonDisabled: {
-    backgroundColor: '#334155',
+    backgroundColor: Colors.inputBorder,
   },
   buttonText: {
     color: '#FFFFFF',
     fontSize: 17,
+    fontFamily: 'Inter_700Bold',
     fontWeight: '700',
   },
   resendButton: {
@@ -266,11 +281,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   resendText: {
-    color: '#818CF8',
+    color: Colors.primary,
     fontSize: 15,
+    fontFamily: 'Inter_500Medium',
     fontWeight: '500',
   },
   resendDisabled: {
-    color: '#475569',
+    color: Colors.textTertiary,
   },
 });

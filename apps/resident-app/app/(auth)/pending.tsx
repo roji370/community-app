@@ -7,24 +7,27 @@ import {
   Easing,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/store/authStore';
 import { checkApprovalStatus } from '../../src/services/auth';
 
-/**
- * Pending Approval Screen
- *
- * DESIGN DECISION (from execution plan §2.1):
- * This is a FIRST-CLASS SCREEN, not a loading spinner.
- * Users will sit in this state for hours/days in real usage.
- * It must feel intentional and reassuring, not like something is broken.
- */
+const Colors = {
+  background: '#F8F9FF',
+  surface: '#FFFFFF',
+  primary: '#2563EB',
+  primaryDark: '#004AC6',
+  textPrimary: '#0B1C30',
+  textTertiary: '#737686',
+  cardBorder: '#F1F5F9',
+  surfaceContainerLow: '#EFF4FF',
+};
+
 export default function PendingScreen() {
   const { user, setUser, logout } = useAuthStore();
   const router = useRouter();
   const pulseAnim = useRef(new Animated.Value(0.4)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
-  // Gentle pulse animation on the icon
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
@@ -44,7 +47,6 @@ export default function PendingScreen() {
     ).start();
   }, []);
 
-  // Slow rotation on the hourglass
   useEffect(() => {
     Animated.loop(
       Animated.timing(rotateAnim, {
@@ -56,13 +58,11 @@ export default function PendingScreen() {
     ).start();
   }, []);
 
-  // Poll for approval status every 15 seconds
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
         const { status } = await checkApprovalStatus();
         if (status === 'ACTIVE') {
-          // User has been approved!
           const { getProfile } = await import('../../src/services/auth');
           const profile = await getProfile();
           setUser(profile);
@@ -72,7 +72,6 @@ export default function PendingScreen() {
         // Silently ignore polling errors
       }
     }, 15000);
-
     return () => clearInterval(interval);
   }, []);
 
@@ -89,11 +88,9 @@ export default function PendingScreen() {
       <View style={styles.content}>
         {/* Animated icon */}
         <Animated.View style={[styles.iconContainer, { opacity: pulseAnim }]}>
-          <Animated.Text
-            style={[styles.icon, { transform: [{ rotate }] }]}
-          >
-            ⏳
-          </Animated.Text>
+          <Animated.View style={{ transform: [{ rotate }] }}>
+            <Ionicons name="time" size={48} color={Colors.primary} />
+          </Animated.View>
         </Animated.View>
 
         <Text style={styles.title}>Approval Pending</Text>
@@ -106,7 +103,9 @@ export default function PendingScreen() {
         </Text>
 
         <View style={styles.infoCard}>
-          <Text style={styles.infoIcon}>💡</Text>
+          <View style={styles.infoIconCircle}>
+            <Ionicons name="information-circle" size={20} color={Colors.primary} />
+          </View>
           <Text style={styles.infoText}>
             Your society's committee admin will review and approve your request.
             You'll receive a notification once approved.
@@ -114,7 +113,7 @@ export default function PendingScreen() {
         </View>
 
         <View style={styles.statusRow}>
-          <View style={[styles.statusDot, styles.statusDotActive]} />
+          <View style={styles.statusDot} />
           <Text style={styles.statusLabel}>Checking for approval...</Text>
         </View>
 
@@ -135,7 +134,7 @@ export default function PendingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: Colors.background,
   },
   content: {
     flex: 1,
@@ -144,56 +143,60 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#1E293B',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: Colors.primary + '12',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 32,
-    borderWidth: 2,
-    borderColor: '#334155',
-  },
-  icon: {
-    fontSize: 52,
   },
   title: {
     fontSize: 28,
+    fontFamily: 'Inter_700Bold',
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: Colors.textPrimary,
     marginBottom: 12,
     textAlign: 'center',
   },
   message: {
     fontSize: 16,
-    color: '#94A3B8',
+    fontFamily: 'Inter_400Regular',
+    fontWeight: '400',
+    color: Colors.textTertiary,
     textAlign: 'center',
     lineHeight: 26,
     marginBottom: 32,
   },
   highlight: {
-    color: '#A5B4FC',
+    color: Colors.primary,
     fontWeight: '600',
   },
   infoCard: {
     flexDirection: 'row',
-    backgroundColor: '#1E293B',
-    borderRadius: 14,
-    padding: 16,
+    backgroundColor: Colors.surface,
+    borderRadius: 20,
+    padding: 18,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.cardBorder,
     alignItems: 'flex-start',
     gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.03,
+    shadowRadius: 16,
+    elevation: 1,
   },
-  infoIcon: {
-    fontSize: 20,
+  infoIconCircle: {
     marginTop: 2,
   },
   infoText: {
     flex: 1,
     fontSize: 14,
-    color: '#CBD5E1',
+    fontFamily: 'Inter_400Regular',
+    fontWeight: '400',
+    color: Colors.textTertiary,
     lineHeight: 22,
   },
   statusRow: {
@@ -206,13 +209,13 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-  },
-  statusDotActive: {
     backgroundColor: '#22C55E',
   },
   statusLabel: {
     fontSize: 13,
-    color: '#64748B',
+    fontFamily: 'Inter_400Regular',
+    fontWeight: '400',
+    color: Colors.textTertiary,
   },
   footer: {
     position: 'absolute',
@@ -220,10 +223,12 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: '#64748B',
+    fontFamily: 'Inter_400Regular',
+    fontWeight: '400',
+    color: Colors.textTertiary,
   },
   footerLink: {
-    color: '#818CF8',
+    color: Colors.primary,
     fontWeight: '500',
   },
 });

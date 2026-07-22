@@ -10,8 +10,31 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { getUnitsForSociety, onboardUser } from '../../src/services/auth';
 import { useAuthStore } from '../../src/store/authStore';
+
+const Colors = {
+  background: '#F8F9FF',
+  surface: '#FFFFFF',
+  primary: '#2563EB',
+  primaryDark: '#004AC6',
+  textPrimary: '#0B1C30',
+  textTertiary: '#737686',
+  cardBorder: '#F1F5F9',
+  inputBorder: '#E2E8F0',
+  surfaceContainerLow: '#EFF4FF',
+};
+
+const Shadow = {
+  card: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.03,
+    shadowRadius: 16,
+    elevation: 1,
+  },
+};
 
 interface UnitItem {
   id: string;
@@ -35,9 +58,7 @@ export default function UnitSelectionScreen() {
   const setUser = useAuthStore((s) => s.setUser);
 
   useEffect(() => {
-    if (societyId) {
-      loadUnits();
-    }
+    if (societyId) loadUnits();
   }, [societyId]);
 
   const loadUnits = async () => {
@@ -53,7 +74,6 @@ export default function UnitSelectionScreen() {
 
   const handleSubmit = async () => {
     if (!selectedUnit || !name.trim() || !societyId) return;
-
     setSubmitting(true);
     try {
       const user = await onboardUser({
@@ -72,7 +92,6 @@ export default function UnitSelectionScreen() {
     }
   };
 
-  // Group units by block
   const groupedByBlock: Record<string, UnitItem[]> = {};
   units.forEach((unit) => {
     const block = unit.block || 'Units';
@@ -83,8 +102,8 @@ export default function UnitSelectionScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backText}>← Back</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+          <Ionicons name="arrow-back" size={20} color={Colors.textPrimary} />
         </TouchableOpacity>
       </View>
 
@@ -97,7 +116,7 @@ export default function UnitSelectionScreen() {
         <TextInput
           style={styles.nameInput}
           placeholder="Enter your full name"
-          placeholderTextColor="#475569"
+          placeholderTextColor={Colors.textTertiary}
           value={name}
           onChangeText={setName}
           autoCapitalize="words"
@@ -106,7 +125,7 @@ export default function UnitSelectionScreen() {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6366F1" />
+          <ActivityIndicator size="large" color={Colors.primary} />
         </View>
       ) : (
         <FlatList
@@ -136,9 +155,10 @@ export default function UnitSelectionScreen() {
                       {unit.identifier}
                     </Text>
                     {unit.residentCount > 0 && (
-                      <Text style={styles.occupiedDot}>
-                        {unit.residentCount} 👤
-                      </Text>
+                      <View style={styles.occupiedRow}>
+                        <Ionicons name="person" size={10} color={Colors.textTertiary} />
+                        <Text style={styles.occupiedText}>{unit.residentCount}</Text>
+                      </View>
                     )}
                   </TouchableOpacity>
                 ))}
@@ -160,6 +180,7 @@ export default function UnitSelectionScreen() {
             <Text style={styles.submitText}>
               {submitting ? 'Requesting access...' : 'Request Access'}
             </Text>
+            {!submitting && <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />}
           </TouchableOpacity>
         </View>
       )}
@@ -170,30 +191,39 @@ export default function UnitSelectionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: Colors.background,
     paddingTop: 60,
   },
   header: {
     paddingHorizontal: 24,
     marginBottom: 24,
   },
-  backText: {
-    color: '#94A3B8',
-    fontSize: 16,
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: Colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    ...Shadow.card,
   },
   title: {
     fontSize: 28,
+    fontFamily: 'Inter_700Bold',
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: Colors.textPrimary,
     paddingHorizontal: 24,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 16,
-    color: '#818CF8',
+    fontFamily: 'Inter_500Medium',
+    fontWeight: '500',
+    color: Colors.primary,
     paddingHorizontal: 24,
     marginBottom: 20,
-    fontWeight: '500',
   },
   nameSection: {
     paddingHorizontal: 24,
@@ -201,19 +231,22 @@ const styles = StyleSheet.create({
   },
   nameLabel: {
     fontSize: 14,
-    color: '#CBD5E1',
-    marginBottom: 8,
+    fontFamily: 'Inter_500Medium',
     fontWeight: '500',
+    color: Colors.textPrimary,
+    marginBottom: 8,
   },
   nameInput: {
-    backgroundColor: '#1E293B',
-    borderRadius: 12,
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#F8FAFC',
+    fontFamily: 'Inter_400Regular',
+    fontWeight: '400',
+    color: Colors.textPrimary,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.inputBorder,
   },
   loadingContainer: {
     flex: 1,
@@ -228,11 +261,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   blockHeader: {
-    fontSize: 14,
+    fontSize: 13,
+    fontFamily: 'Inter_600SemiBold',
     fontWeight: '600',
-    color: '#94A3B8',
+    color: Colors.textTertiary,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
     marginBottom: 10,
   },
   unitGrid: {
@@ -241,31 +275,40 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   unitChip: {
-    backgroundColor: '#1E293B',
-    borderRadius: 10,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderWidth: 1.5,
-    borderColor: '#334155',
+    borderColor: Colors.cardBorder,
     minWidth: 80,
     alignItems: 'center',
+    ...Shadow.card,
   },
   unitChipSelected: {
-    borderColor: '#6366F1',
-    backgroundColor: '#1E1B4B',
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary + '08',
   },
   unitChipText: {
-    color: '#E2E8F0',
+    color: Colors.textPrimary,
     fontSize: 15,
+    fontFamily: 'Inter_600SemiBold',
     fontWeight: '600',
   },
   unitChipTextSelected: {
-    color: '#A5B4FC',
+    color: Colors.primary,
   },
-  occupiedDot: {
+  occupiedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 3,
+  },
+  occupiedText: {
     fontSize: 11,
-    color: '#64748B',
-    marginTop: 2,
+    fontFamily: 'Inter_400Regular',
+    fontWeight: '400',
+    color: Colors.textTertiary,
   },
   bottomBar: {
     position: 'absolute',
@@ -274,22 +317,26 @@ const styles = StyleSheet.create({
     right: 0,
     padding: 24,
     paddingBottom: 40,
-    backgroundColor: '#0F172A',
+    backgroundColor: Colors.background,
     borderTopWidth: 1,
-    borderTopColor: '#1E293B',
+    borderTopColor: Colors.cardBorder,
   },
   submitButton: {
-    backgroundColor: '#6366F1',
-    borderRadius: 12,
-    paddingVertical: 16,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.primary,
+    borderRadius: 16,
+    paddingVertical: 18,
   },
   submitDisabled: {
-    backgroundColor: '#334155',
+    backgroundColor: Colors.inputBorder,
   },
   submitText: {
     color: '#FFFFFF',
     fontSize: 17,
+    fontFamily: 'Inter_700Bold',
     fontWeight: '700',
   },
 });
