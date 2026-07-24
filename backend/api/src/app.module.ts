@@ -7,6 +7,9 @@ import { GuardAuthModule } from './guard-auth/guard-auth.module';
 import { VisitorsModule } from './visitors/visitors.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { BillingModule } from './billing/billing.module';
+import { ComplaintsModule } from './complaints/complaints.module';
+import { CommitteeModule } from './committee/committee.module';
 
 @Module({
   imports: [
@@ -26,6 +29,9 @@ import { NotificationsModule } from './notifications/notifications.module';
     VisitorsModule,
     GatewayModule,
     NotificationsModule,
+    BillingModule,
+    ComplaintsModule,
+    CommitteeModule,
   ],
 })
 export class AppModule {}
