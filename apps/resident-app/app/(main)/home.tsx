@@ -6,6 +6,8 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/store/authStore';
 import { getBillingSummary } from '../../src/services/billing';
 import type { BillingSummary } from '../../src/services/billing';
+import { getComplaintsSummary } from '../../src/services/complaints';
+import type { ComplaintsSummary } from '../../src/services/complaints';
 
 // ─── Design Tokens ───────────────────────────────────────────────
 const Colors = {
