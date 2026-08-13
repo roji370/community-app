@@ -91,6 +91,16 @@ enum ComplaintCategory {
   OTHER
 }
 
+enum StaffType {
+  DOMESTIC_HELP
+  DRIVER
+  COOK
+  GARDENER
+  PLUMBER
+  ELECTRICIAN
+  OTHER
+}
+
 enum BillStatus {
   PENDING
   PAID
@@ -119,6 +129,7 @@ model Society {
   bills     Bill[]
   notifications AppNotification[]
   guards    Guard[]
+  staffAttendance StaffAttendance[]
 
   @@index([pincode])
   @@index([name])
@@ -137,6 +148,7 @@ model Unit {
   visitors   Visitor[]
   complaints Complaint[]
   bills      Bill[]
+  staffAttendance StaffAttendance[]
 
   @@unique([societyId, identifier])
   @@index([societyId])
@@ -348,6 +360,7 @@ model Guard {
 
   society   Society  @relation(fields: [societyId], references: [id])
   visitors  Visitor[]
+  staffAttendance StaffAttendance[]
 
   @@index([societyId])
   @@index([staffId])
@@ -364,4 +377,24 @@ model FcmToken {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+/// Staff/domestic-help daily attendance log — tracked by guards at the gate
+model StaffAttendance {
+  id         String    @id @default(cuid())
+  societyId  String
+  guardId    String
+  staffName  String
+  staffType  StaffType
+  unitId     String?          // which unit's domestic help (optional)
+  checkIn    DateTime  @default(now())
+  checkOut   DateTime?
+  createdAt  DateTime  @default(now())
+
+  society    Society   @relation(fields: [societyId], references: [id])
+  guard      Guard     @relation(fields: [guardId], references: [id])
+  unit       Unit?     @relation(fields: [unitId], references: [id])
+
+  @@index([societyId, checkIn])
+  @@index([guardId])
 }
