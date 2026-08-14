@@ -10,7 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { VisitorsService } from './visitors.service';
-import { CreateVisitorDto, ResolveVisitorDto } from './dto/visitors.dto';
+import { CreateVisitorDto, ResolveVisitorDto, CreatePreApprovedVisitorDto } from './dto/visitors.dto';
 import { GuardJwtAuthGuard } from '../guard-auth/guards/guard-jwt.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { ActiveStatusGuard } from '../auth/guards/active-status.guard';
@@ -20,6 +20,7 @@ import { GuardJwtPayload } from '../guard-auth/strategies/guard-jwt.strategy';
 interface ResidentUser {
   id: string;
   unitId: string | null;
+  societyId: string | null;
   status: string;
 }
 
@@ -35,6 +36,33 @@ export class VisitorsController {
     @Request() req: { user: GuardJwtPayload },
   ) {
     return this.visitorsService.createGateVisitor(dto, req.user);
+  }
+
+  // Resident pre-approves a visitor (generates QR/OTP pass)
+  @Post('pre-approve')
+  @UseGuards(JwtAuthGuard, ActiveStatusGuard)
+  preApproveVisitor(
+    @Body() dto: CreatePreApprovedVisitorDto,
+    @Request() req: { user: ResidentUser },
+  ) {
+    const unitId = req.user.unitId;
+    const societyId = req.user.societyId;
+    if (!unitId || !societyId) {
+      return { error: 'User not linked to a unit' };
+    }
+    return this.visitorsService.createPreApprovedVisitor(
+      dto,
+      req.user.id,
+      unitId,
+      societyId,
+    );
+  }
+
+  // Guard validates a visitor pass by code
+  @Get('pass/:code')
+  @UseGuards(GuardJwtAuthGuard)
+  validatePass(@Param('code') code: string) {
+    return this.visitorsService.validateVisitorPass(code);
   }
 
   // Resident approves or denies a visitor
