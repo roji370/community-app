@@ -1,5 +1,5 @@
-import { IsString, IsNotEmpty, IsEnum, IsOptional } from 'class-validator';
-import { VisitorPurpose } from '@prisma/client';
+import { IsString, IsNotEmpty, IsEnum, IsOptional, IsDateString } from 'class-validator';
+import { VisitorPurpose, VisitorEntryType } from '@prisma/client';
 
 export class CreateVisitorDto {
   @IsString()
@@ -39,4 +39,31 @@ export class RegisterFcmTokenDto {
   @IsString()
   @IsNotEmpty()
   declare platform: string;
+}
+
+export class CreatePreApprovedVisitorDto {
+  @IsString()
+  @IsNotEmpty()
+  declare name: string;
+
+  @IsEnum(VisitorPurpose)
+  declare purpose: VisitorPurpose;
+
+  @IsString()
+  @IsOptional()
+  declare phone?: string;
+
+  @IsEnum(['ONE_TIME', 'SCHEDULED'] as const)
+  @IsOptional()
+  declare entryType?: 'ONE_TIME' | 'SCHEDULED';
+
+  @IsDateString()
+  @IsOptional()
+  declare expectedAt?: string;
+}
+
+export class ValidatePassDto {
+  @IsString()
+  @IsNotEmpty()
+  declare code: string;
 }
