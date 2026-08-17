@@ -163,4 +163,109 @@ export class UsersService {
 
     return { status: user.status };
   }
+
+  // ── Notification preferences ──────────────────────────────────────────
+
+  async getNotificationPreferences(userId: string) {
+    const allCategories = Object.values(NotificationCategory);
+
+    const existing = await this.prisma.notificationPreference.findMany({
+      where: { userId },
+    });
+
+    const existingMap = new Map(
+      existing.map((p) => [p.category, p.enabled]),
+    );
+
+    // Return all categories, filling in defaults for any that don't exist yet
+    return allCategories.map((category) => ({
+      category,
+      enabled: existingMap.has(category)
+        ? existingMap.get(category)!
+        : category === NotificationCategory.COMMERCIAL
+          ? false
+          : true,
+      locked: category === NotificationCategory.SECURITY,
+    }));
+  }
+
+  async updateNotificationPreference(
+    userId: string,
+    category: NotificationCategory,
+    enabled: boolean,
+  ) {
+    // SECURITY can never be disabled
+    if (category === NotificationCategory.SECURITY && !enabled) {
+      throw new BadRequestException(
+        'Security notifications cannot be disabled',
+      );
+    }
+
+    const pref = await this.prisma.notificationPreference.upsert({
+      where: {
+        userId_category: { userId, category },
+      },
+      create: { userId, category, enabled },
+      update: { enabled },
+    });
+
+    this.logger.log(
+      `Notification preference updated: ${category} = ${enabled} for user ${userId}`,
+    );
+
+    return pref;
+  }
+
+  // ── Resident notices ──────────────────────────────────────────────────
+
+  async getNoticesForResident(societyId: string, page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+
+    const [notices, total] = await Promise.all([
+      this.prisma.notice.findMany({
+        where: { societyId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          createdByUser: { select: { name: true } },
+        },
+      }),
+      this.prisma.notice.count({ where: { societyId } }),
+    ]);
+
+    return { notices, total, page, limit };
+  }
+
+  async acknowledgeNotice(noticeId: string, userId: string) {
+    const notice = await this.prisma.notice.findUnique({
+      where: { id: noticeId },
+    });
+
+    if (!notice) throw new NotFoundException('Notice not found');
+    if (!notice.requiresAcknowledgment) {
+      throw new BadRequestException('This notice does not require acknowledgment');
+    }
+
+    // Atomic: only push if userId is not already in the array.
+    // updateMany with a NOT-has filter prevents duplicate entries under concurrency.
+    const result = await this.prisma.notice.updateMany({
+      where: {
+        id: noticeId,
+        NOT: {
+          acknowledgedByUserIds: { has: userId },
+        },
+      },
+      data: {
+        acknowledgedByUserIds: {
+          push: userId,
+        },
+      },
+    });
+
+    return {
+      acknowledged: true,
+      alreadyAcknowledged: result.count === 0,
+    };
+  }
 }
