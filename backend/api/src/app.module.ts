@@ -10,6 +10,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { BillingModule } from './billing/billing.module';
 import { ComplaintsModule } from './complaints/complaints.module';
 import { CommitteeModule } from './committee/committee.module';
+import { StaffAttendanceModule } from './staff-attendance/staff-attendance.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { CommitteeModule } from './committee/committee.module';
     BillingModule,
     ComplaintsModule,
     CommitteeModule,
+    StaffAttendanceModule,
   ],
 })
 export class AppModule {}
