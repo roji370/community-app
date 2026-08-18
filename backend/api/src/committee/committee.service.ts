@@ -512,16 +512,20 @@ export class CommitteeService {
     });
 
     const header = 'Name,Phone,Purpose,Unit,Guard,Status,Entry Time,Responded By\n';
+
+    // Escape a CSV field: wrap in quotes, double any internal quotes
+    const esc = (val: string) => `"${val.replace(/"/g, '""')}"`;
+
     const rows = visitors.map((v) => {
       const fields = [
-        `"${v.name}"`,
-        v.phone || '',
-        v.purpose,
-        v.unit.identifier,
-        v.guard?.name || '',
-        v.status,
-        v.createdAt.toISOString(),
-        v.respondedByUser?.name || '',
+        esc(v.name),
+        esc(v.phone || ''),
+        esc(v.purpose),
+        esc(v.unit.identifier),
+        esc(v.guard?.name || ''),
+        esc(v.status),
+        esc(v.createdAt.toISOString()),
+        esc(v.respondedByUser?.name || ''),
       ];
       return fields.join(',');
     });
