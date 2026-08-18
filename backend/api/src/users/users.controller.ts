@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Query,
   Param,
@@ -9,7 +10,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { OnboardUserDto } from './dto/users.dto';
+import { OnboardUserDto, UpdateNotificationPreferenceDto } from './dto/users.dto';
 import { RegisterFcmTokenDto } from '../visitors/dto/visitors.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { ActiveStatusGuard } from '../auth/guards/active-status.guard';
@@ -61,6 +62,66 @@ export class UsersController {
       return { status: 'ONBOARDING' };
     }
     return this.usersService.checkStatus(req.user.id);
+  }
+
+  /**
+   * GET /api/users/me/notification-preferences
+   * Get all notification preference categories with enabled state.
+   */
+  @Get('me/notification-preferences')
+  @UseGuards(JwtAuthGuard, ActiveStatusGuard)
+  async getNotificationPreferences(@Request() req: { user: { id: string } }) {
+    return this.usersService.getNotificationPreferences(req.user.id);
+  }
+
+  /**
+   * PATCH /api/users/me/notification-preferences
+   * Toggle a notification category on/off. SECURITY cannot be disabled.
+   */
+  @Patch('me/notification-preferences')
+  @UseGuards(JwtAuthGuard, ActiveStatusGuard)
+  async updateNotificationPreference(
+    @Request() req: { user: { id: string } },
+    @Body() dto: UpdateNotificationPreferenceDto,
+  ) {
+    return this.usersService.updateNotificationPreference(
+      req.user.id,
+      dto.category,
+      dto.enabled,
+    );
+  }
+
+  /**
+   * GET /api/users/me/notices
+   * Get society notices for the current resident (paginated).
+   */
+  @Get('me/notices')
+  @UseGuards(JwtAuthGuard, ActiveStatusGuard)
+  async getNotices(
+    @Request() req: { user: { societyId: string | null } },
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+  ) {
+    const societyId = req.user.societyId;
+    if (!societyId) return { notices: [], total: 0, page: 1, limit: 20 };
+    return this.usersService.getNoticesForResident(
+      societyId,
+      parseInt(page),
+      parseInt(limit),
+    );
+  }
+
+  /**
+   * POST /api/users/me/notices/:id/acknowledge
+   * Acknowledge a notice that requires acknowledgment.
+   */
+  @Post('me/notices/:id/acknowledge')
+  @UseGuards(JwtAuthGuard, ActiveStatusGuard)
+  async acknowledgeNotice(
+    @Param('id') noticeId: string,
+    @Request() req: { user: { id: string } },
+  ) {
+    return this.usersService.acknowledgeNotice(noticeId, req.user.id);
   }
 
   /**
