@@ -1,13 +1,16 @@
 import React, { useState, useRef, useCallback } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, ActivityIndicator, Alert, FlatList,
+  ScrollView, ActivityIndicator, Alert, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import NetInfo from '@react-native-community/netinfo';
 import guardApi from '../../src/services/api';
 import { useGuardStore } from '../../src/store/guardStore';
 import { useGuardSocket, VisitorResult } from '../../src/hooks/useGuardSocket';
+import { enqueue } from '../../src/services/offlineQueue';
 
 const PURPOSES = [
   { key: 'GUEST', label: '👤 Guest' },
@@ -37,6 +40,9 @@ export default function EntryScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentVisitorId, setCurrentVisitorId] = useState<string | null>(null);
   const [waitTimer, setWaitTimer] = useState(0);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [passCode, setPassCode] = useState('');
+  const [isValidating, setIsValidating] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const handleVisitorResult = useCallback((result: VisitorResult) => {
@@ -81,8 +87,25 @@ export default function EntryScreen() {
     if (!name.trim()) { Alert.alert('Required', 'Enter visitor name.'); return; }
     if (!selectedUnit) { Alert.alert('Required', 'Select a unit.'); return; }
     if (!isConnected) {
-      Alert.alert('No Connection', 'Not connected to server. Check your network.');
-      return;
+      // Offline: queue entry locally
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        try {
+          await enqueue({
+            name: name.trim(),
+            purpose: selectedPurpose,
+            unitId: selectedUnit.id,
+          });
+          router.push({
+            pathname: '/(main)/result',
+            params: { status: 'QUEUED', residentName: '', visitorId: '' },
+          });
+          setName(''); setSelectedUnit(null); setUnitSearch(''); setPhotoUri(null);
+        } catch {
+          Alert.alert('Error', 'Failed to queue entry.');
+        }
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -136,6 +159,43 @@ export default function EntryScreen() {
 
         {!isSubmitting && (
           <>
+            {/* Photo Capture */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>PHOTO (OPTIONAL)</Text>
+              {photoUri ? (
+                <View style={styles.photoPreview}>
+                  <Image source={{ uri: photoUri }} style={styles.photoThumb} />
+                  <TouchableOpacity
+                    style={styles.retakeBtn}
+                    onPress={() => setPhotoUri(null)}
+                  >
+                    <Text style={styles.retakeBtnText}>Retake</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.captureBtn}
+                  onPress={async () => {
+                    const perm = await ImagePicker.requestCameraPermissionsAsync();
+                    if (!perm.granted) {
+                      Alert.alert('Permission', 'Camera permission is required.');
+                      return;
+                    }
+                    const result = await ImagePicker.launchCameraAsync({
+                      quality: 0.6,
+                      allowsEditing: false,
+                    });
+                    if (!result.canceled && result.assets[0]) {
+                      setPhotoUri(result.assets[0].uri);
+                    }
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.captureBtnText}>📷 Take Photo</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
             {/* Visitor Name */}
             <View style={styles.section}>
               <Text style={styles.sectionLabel}>VISITOR NAME</Text>
@@ -219,7 +279,6 @@ export default function EntryScreen() {
               )}
             </View>
 
-            {/* Notify Button */}
             <TouchableOpacity
               style={[
                 styles.notifyBtn,
@@ -231,6 +290,56 @@ export default function EntryScreen() {
             >
               <Text style={styles.notifyBtnText}>🔔  NOTIFY RESIDENT</Text>
             </TouchableOpacity>
+
+            {/* Pass Validation Divider */}
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>OR VALIDATE PASS</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Pass Code Entry */}
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>PRE-APPROVED PASS CODE</Text>
+              <View style={styles.passRow}>
+                <TextInput
+                  style={[styles.textInput, { flex: 1 }]}
+                  value={passCode}
+                  onChangeText={(t) => setPassCode(t.toUpperCase())}
+                  placeholder="Enter 6-char code"
+                  placeholderTextColor="#475569"
+                  autoCapitalize="characters"
+                  maxLength={6}
+                />
+                <TouchableOpacity
+                  style={[styles.validateBtn, passCode.length < 4 && styles.notifyBtnDisabled]}
+                  disabled={passCode.length < 4 || isValidating}
+                  onPress={async () => {
+                    setIsValidating(true);
+                    try {
+                      const res = await guardApi.get(`/visitors/pass/${passCode}`);
+                      const data = res.data.data ?? res.data;
+                      Alert.alert(
+                        '✅ Valid Pass',
+                        `${data.name} (${data.purpose})\nUnit: ${data.unit}\nApproved by: ${data.approvedBy}`,
+                        [{ text: 'OK' }],
+                      );
+                      setPassCode('');
+                    } catch (err: any) {
+                      Alert.alert('Invalid', err?.response?.data?.message ?? 'Pass not found or expired.');
+                    } finally {
+                      setIsValidating(false);
+                    }
+                  }}
+                >
+                  {isValidating ? (
+                    <ActivityIndicator color="#FFF" size="small" />
+                  ) : (
+                    <Text style={styles.validateBtnText}>Verify</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
           </>
         )}
       </ScrollView>
@@ -320,5 +429,40 @@ const styles = StyleSheet.create({
   notifyBtnDisabled: { opacity: 0.4 },
   notifyBtnText: {
     color: '#000', fontSize: 17, fontWeight: '800', letterSpacing: 0.5,
+  },
+  // Photo capture
+  photoPreview: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+  },
+  photoThumb: {
+    width: 80, height: 80, borderRadius: 12, backgroundColor: '#1E293B',
+  },
+  retakeBtn: {
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
+    borderWidth: 1, borderColor: '#475569',
+  },
+  retakeBtnText: { color: '#94A3B8', fontSize: 14, fontWeight: '600' },
+  captureBtn: {
+    backgroundColor: '#1E293B', borderRadius: 14, paddingVertical: 14,
+    alignItems: 'center', borderWidth: 1, borderColor: '#334155',
+  },
+  captureBtnText: { color: '#94A3B8', fontSize: 15, fontWeight: '600' },
+  // Pass validation
+  dividerRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 20,
+  },
+  dividerLine: { flex: 1, height: 1, backgroundColor: '#334155' },
+  dividerText: {
+    color: '#64748B', fontSize: 12, fontWeight: '700', letterSpacing: 1,
+  },
+  passRow: {
+    flexDirection: 'row', gap: 10,
+  },
+  validateBtn: {
+    backgroundColor: '#22C55E', borderRadius: 14, paddingHorizontal: 20,
+    paddingVertical: 14, justifyContent: 'center',
+  },
+  validateBtnText: {
+    color: '#FFF', fontSize: 15, fontWeight: '700',
   },
 });
