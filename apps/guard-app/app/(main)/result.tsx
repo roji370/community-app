@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
-type ResultStatus = 'APPROVED' | 'DENIED' | 'EXPIRED';
+type ResultStatus = 'APPROVED' | 'DENIED' | 'EXPIRED' | 'QUEUED';
 
 const RESULT_CONFIG: Record<ResultStatus, {
   icon: string; title: string; subtitle: string;
@@ -31,6 +31,13 @@ const RESULT_CONFIG: Record<ResultStatus, {
     subtitle: 'No response received. Visitor is not permitted.',
     color: '#F59E0B',
     bg: '#451A03',
+  },
+  QUEUED: {
+    icon: '📴',
+    title: 'ENTRY QUEUED',
+    subtitle: 'You are offline. This entry will be synced when connectivity is restored.',
+    color: '#F97316',
+    bg: '#431407',
   },
 };
 
