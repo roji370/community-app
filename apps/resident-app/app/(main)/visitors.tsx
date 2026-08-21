@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'expo-router';
 import {
   View,
   Text,
@@ -200,6 +201,7 @@ function PastVisitorItem({ visitor }: { visitor: Visitor }) {
 
 // ─── Main Screen ─────────────────────────────────────────────────
 export default function VisitorsScreen() {
+  const router = useRouter();
   const { user } = useAuthStore();
   const [visitors, setVisitors] = useState<Visitor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -335,7 +337,7 @@ export default function VisitorsScreen() {
       )}
 
       {/* ── Invite Guest CTA ───────────────────────────── */}
-      <TouchableOpacity style={styles.inviteBtn} activeOpacity={0.8}>
+      <TouchableOpacity style={styles.inviteBtn} activeOpacity={0.8} onPress={() => router.push('/invite-guest')}>
         <Ionicons name="add" size={20} color="#FFFFFF" />
         <Text style={styles.inviteBtnText}>Invite Guest</Text>
       </TouchableOpacity>
