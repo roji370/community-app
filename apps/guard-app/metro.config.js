@@ -6,6 +6,13 @@ const workspaceRoot = path.resolve(projectRoot, '../..');
 
 const config = getDefaultConfig(projectRoot);
 
+// Block @react-native-firebase from being resolved — guard-app does not use Firebase,
+// but the monorepo watchFolders causes Metro to pick it up from resident-app's deps.
+config.resolver.blockList = [
+  /.*[/\\]apps[/\\]resident-app[/\\].*/,
+  /.*@react-native-firebase.*/,
+];
+
 // 1. Watch all files in the monorepo
 config.watchFolders = [workspaceRoot];
 
@@ -23,6 +30,15 @@ config.resolver.unstable_enableSymlinks = true;
 const expoRouterDir = path.resolve(projectRoot, 'node_modules/expo-router');
 config.resolver.extraNodeModules = {
   'expo-router': expoRouterDir,
+};
+
+// 5. Prevent Metro from walking up directories into sibling apps
+config.resolver.disableHierarchicalLookup = true;
+
+// 6. Bind Metro to all interfaces so physical devices can reach it via LAN IP
+config.server = {
+  ...config.server,
+  host: '0.0.0.0',
 };
 
 module.exports = config;
